@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -14,7 +15,7 @@ import {
   FieldSeparator,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email é obrigatório').email('Email inválido'),
@@ -30,6 +31,9 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<'form'>) {
+  const [error, setError] = useState<string | null>(null);
+  const { login } = useAuth();
+
   const {
     register,
     handleSubmit,
@@ -38,15 +42,13 @@ export function LoginForm({
     resolver: zodResolver(loginSchema),
   });
 
-  const navigate = useRouter();
-
   const onSubmit = async (data: LoginFormData) => {
     try {
-      console.log('Login data:', data);
-
-      navigate.push('/app/meus-presentes');
-    } catch (error) {
+      setError(null);
+      await login(data.email, data.password);
+    } catch (error: any) {
       console.error('Erro no login:', error);
+      setError(error.message || 'Erro ao fazer login');
     }
   };
 
@@ -63,6 +65,11 @@ export function LoginForm({
             Insira seu email e senha para acessar sua conta.
           </p>
         </div>
+        {error && (
+          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md border border-destructive/20">
+            {error}
+          </div>
+        )}
         <Field data-invalid={!!errors.email}>
           <FieldLabel htmlFor="email">Email</FieldLabel>
           <Input

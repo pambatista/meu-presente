@@ -1,19 +1,34 @@
 'use client';
 
-import { Gift, LogOut, User } from 'lucide-react';
+import { Gift, LogOut, User, Share2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function AppHeader() {
   const router = useRouter();
   const pathname = usePathname();
   const activeLink = pathname;
+  const { logout, user } = useAuth();
 
-  const handleLogout = () => {
-    // Aqui você pode adicionar a lógica de logout
-    console.log('Logout');
-    router.push('/login');
+  const handleLogout = async () => {
+    await logout();
+  };
+
+  const handleShare = () => {
+    if (!user) return;
+
+    const shareUrl = `${window.location.origin}/lista/${user.id}`;
+
+    navigator.clipboard.writeText(shareUrl);
+    toast.success('Link copiado!', {
+      description: 'Compartilhe com seus amigos e familiares',
+      classNames: {
+        'description': '!text-slate-700',
+      },
+    });
   };
 
   return (
@@ -30,7 +45,7 @@ export function AppHeader() {
           {/* Menu de navegação */}
           <nav className="flex items-center gap-4">
             {/* Botão Presentes */}
-            <Button
+            {/* <Button
               variant={
                 activeLink === '/app/meus-presentes' ? 'default' : 'ghost'
               }
@@ -40,10 +55,10 @@ export function AppHeader() {
             >
               <Gift className="size-5" />
               <span className="font-medium text-sm">Meus Presentes</span>
-            </Button>
+            </Button> */}
 
             {/* Botão Perfil */}
-            <Button
+            {/* <Button
               variant={activeLink === '/app/perfil' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => router.push('/app/perfil')}
@@ -51,6 +66,17 @@ export function AppHeader() {
             >
               <User className="size-5" />
               <span className="font-medium text-sm">Perfil</span>
+            </Button> */}
+
+            {/* Botão Compartilhar */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShare}
+              title="Compartilhar Lista"
+            >
+              <Share2 className="size-5" />
+              <span className="font-medium text-sm">Compartilhar</span>
             </Button>
 
             {/* Botão Logout */}
@@ -61,6 +87,7 @@ export function AppHeader() {
               title="Sair"
             >
               <LogOut className="size-5" />
+              <span className="font-medium text-sm">Sair</span>
             </Button>
           </nav>
         </div>

@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { User } from 'lucide-react';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 export default function PerfilPage() {
   return (
-    <AppLayout>
+    <ProtectedRoute>
+      <AppLayout>
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Cabeçalho */}
         <div>
@@ -52,5 +54,6 @@ export default function PerfilPage() {
         </div>
       </div>
     </AppLayout>
+    </ProtectedRoute>
   );
 }

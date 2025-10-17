@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -14,6 +15,7 @@ import {
   FieldSeparator,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/contexts/AuthContext';
 
 const registerSchema = z
   .object({
@@ -44,6 +46,9 @@ export function RegisterForm({
   className,
   ...props
 }: React.ComponentProps<'form'>) {
+  const [error, setError] = useState<string | null>(null);
+  const { register: registerUser } = useAuth();
+
   const {
     register,
     handleSubmit,
@@ -54,12 +59,11 @@ export function RegisterForm({
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      console.log('Register data:', data);
-      // Aqui você pode adicionar a lógica de cadastro
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simula uma requisição
-      alert('Cadastro realizado com sucesso!');
-    } catch (error) {
+      setError(null);
+      await registerUser(data.name, data.email, data.password);
+    } catch (error: any) {
       console.error('Erro no cadastro:', error);
+      setError(error.message || 'Erro ao criar conta');
     }
   };
 
@@ -76,6 +80,11 @@ export function RegisterForm({
             Preencha os dados abaixo para criar sua conta.
           </p>
         </div>
+        {error && (
+          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md border border-destructive/20">
+            {error}
+          </div>
+        )}
         <Field data-invalid={!!errors.name}>
           <FieldLabel htmlFor="name">Nome</FieldLabel>
           <Input

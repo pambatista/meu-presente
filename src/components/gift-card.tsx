@@ -7,11 +7,19 @@ interface GiftCardProps {
   id: string;
   name: string;
   image: string;
+  link: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
-export function GiftCard({ id, name, image, onEdit, onDelete }: GiftCardProps) {
+export function GiftCard({
+  id,
+  name,
+  image,
+  link,
+  onEdit,
+  onDelete,
+}: GiftCardProps) {
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       {/* Imagem do Presente */}
@@ -38,7 +46,7 @@ export function GiftCard({ id, name, image, onEdit, onDelete }: GiftCardProps) {
             variant="outline"
             size="sm"
             className="flex-1"
-            onClick={() => onEdit(id)}
+            onClick={() => window.open(link, '_blank')}
           >
             <Link className="size-4 mr-2" />
             Visualizar

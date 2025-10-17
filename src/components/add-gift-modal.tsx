@@ -72,6 +72,7 @@ export function AddGiftModal({ isOpen, onClose, onAdd }: AddGiftModalProps) {
       await new Promise((resolve) => setTimeout(resolve, 500)); // Simula requisição
       onAdd(data);
       reset();
+      setPreview(null);
       onClose();
     } catch (error) {
       console.error('Erro ao adicionar presente:', error);
