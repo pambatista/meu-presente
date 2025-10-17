@@ -127,7 +127,7 @@ export default function PublicListPage() {
         <div className="container mx-auto px-4 text-center text-muted-foreground text-sm">
           <p>
             Crie sua própria lista de presentes em{' '}
-            <a href="/" className="text-primary hover:underline">
+            <a href="/login" className="text-primary hover:underline">
               Meu Presente
             </a>
           </p>
