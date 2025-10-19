@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -35,10 +35,7 @@ const giftSchema = z.object({
     .min(1, 'Nome é obrigatório')
     .min(3, 'O nome deve ter no mínimo 3 caracteres'),
   link: z.string().min(1, 'Link do produto é obrigatório').url('Link inválido'),
-  image: z
-    .string()
-    .min(1, 'URL da imagem é obrigatória')
-    .url('URL da imagem inválida'),
+  image: z.string().optional(),
 });
 
 type GiftFormData = z.infer<typeof giftSchema>;
@@ -46,13 +43,16 @@ type GiftFormData = z.infer<typeof giftSchema>;
 interface AddGiftModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (gift: GiftFormData) => void;
+  onAdd: (gift: GiftFormData & { imageFile?: File }) => void;
 }
 
 export function AddGiftModal({ isOpen, onClose, onAdd }: AddGiftModalProps) {
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [linkValue, setLinkValue] = useState('');
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const {
     register,
@@ -69,10 +69,19 @@ export function AddGiftModal({ isOpen, onClose, onAdd }: AddGiftModalProps) {
 
   const onSubmit = async (data: GiftFormData) => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simula requisição
-      onAdd(data);
+      if (!data.image && !selectedFile) {
+        alert('Por favor, adicione uma imagem do produto');
+        return;
+      }
+      onAdd({
+        ...data,
+        imageFile: selectedFile || undefined,
+      });
       reset();
       setPreview(null);
+      setPreviewFailed(false);
+      setSelectedFile(null);
+      setImagePreview(null);
       onClose();
     } catch (error) {
       console.error('Erro ao adicionar presente:', error);
@@ -84,7 +93,36 @@ export function AddGiftModal({ isOpen, onClose, onAdd }: AddGiftModalProps) {
       reset();
       setPreview(null);
       setLinkValue('');
+      setPreviewFailed(false);
+      setSelectedFile(null);
+      setImagePreview(null);
       onClose();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar tipo de arquivo
+      if (!file.type.startsWith('image/')) {
+        alert('Por favor, selecione apenas arquivos de imagem');
+        return;
+      }
+
+      // Validar tamanho (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('A imagem deve ter no máximo 5MB');
+        return;
+      }
+
+      setSelectedFile(file);
+
+      // Criar preview da imagem
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -92,14 +130,8 @@ export function AddGiftModal({ isOpen, onClose, onAdd }: AddGiftModalProps) {
   const fetchPreview = async (url: string) => {
     if (!url) return;
 
-    try {
-      // Validar se é uma URL válida
-      new URL(url);
-    } catch {
-      return; // URL inválida, não faz nada
-    }
-
     setIsLoadingPreview(true);
+    setPreviewFailed(false);
     try {
       const response = await fetch(
         `/api/preview?url=${encodeURIComponent(url)}`,
@@ -107,9 +139,17 @@ export function AddGiftModal({ isOpen, onClose, onAdd }: AddGiftModalProps) {
       if (response.ok) {
         const data: PreviewData = await response.json();
         setPreview(data);
+        setPreviewFailed(false);
+
+        if (data.title === 'Sem título') {
+          setValue('name', '');
+          setValue('image', '');
+          setPreview(null);
+          setPreviewFailed(true);
+        }
 
         // Preencher automaticamente os campos se estiverem vazios
-        if (data.title && !watch('name')) {
+        if (data.title && data.title !== 'Sem título' && !watch('name')) {
           setValue('name', data.title);
         }
         if (data.image && !watch('image')) {
@@ -118,6 +158,8 @@ export function AddGiftModal({ isOpen, onClose, onAdd }: AddGiftModalProps) {
       }
     } catch (error) {
       console.error('Erro ao buscar preview:', error);
+      setPreview(null);
+      setPreviewFailed(true);
     } finally {
       setIsLoadingPreview(false);
     }
@@ -127,11 +169,8 @@ export function AddGiftModal({ isOpen, onClose, onAdd }: AddGiftModalProps) {
   useEffect(() => {
     if (watchedLink && watchedLink !== linkValue) {
       setLinkValue(watchedLink);
-      const timeoutId = setTimeout(() => {
-        fetchPreview(watchedLink);
-      }, 800); // Debounce de 800ms
 
-      return () => clearTimeout(timeoutId);
+      fetchPreview(watchedLink);
     }
   }, [watchedLink]);
 
@@ -197,6 +236,70 @@ export function AddGiftModal({ isOpen, onClose, onAdd }: AddGiftModalProps) {
                 </div>
               </div>
             )}
+
+            {/* Campos manuais quando preview falha */}
+            {previewFailed && !isLoadingPreview && (
+              <>
+                <Field data-invalid={!!errors.name}>
+                  <FieldLabel htmlFor="name">Nome do Produto</FieldLabel>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Digite o nome do produto"
+                    aria-invalid={!!errors.name}
+                    {...register('name')}
+                  />
+                  {errors.name && (
+                    <FieldError>{errors.name.message}</FieldError>
+                  )}
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="image-upload">
+                    Imagem do Produto
+                  </FieldLabel>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <label
+                        htmlFor="image-upload"
+                        className="flex items-center gap-2 px-4 py-2 border border-border rounded-md cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
+                        <Upload className="size-4" />
+                        <span className="text-sm">
+                          {selectedFile
+                            ? selectedFile.name
+                            : 'Escolher arquivo'}
+                        </span>
+                      </label>
+                      <input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </div>
+
+                    {imagePreview && (
+                      <div className="border border-border rounded-lg p-3 bg-muted/30">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">
+                          Preview
+                        </p>
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-40 object-cover rounded-md"
+                        />
+                      </div>
+                    )}
+
+                    <p className="text-xs text-muted-foreground">
+                      Formatos aceitos: JPG, PNG, WebP, GIF (máx. 5MB)
+                    </p>
+                  </div>
+                </Field>
+              </>
+            )}
           </FieldGroup>
 
           <DialogFooter className="mt-6">
@@ -208,7 +311,7 @@ export function AddGiftModal({ isOpen, onClose, onAdd }: AddGiftModalProps) {
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !watch('name')}>
               {isSubmitting ? 'Adicionando...' : 'Adicionar Presente'}
             </Button>
           </DialogFooter>

@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { Gift } from '@/lib/supabase';
+import { fetchWithAuth } from '@/lib/auth-utils';
 
 export default function MeusPresentesPage() {
   const [gifts, setGifts] = useState<Gift[]>([]);
@@ -29,18 +30,9 @@ export default function MeusPresentesPage() {
   const fetchGifts = async () => {
     if (!user) return;
 
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      toast.error('Token não encontrado');
-      return;
-    }
-
     try {
-      const response = await fetch(`/api/gifts?user_id=${user.id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetchWithAuth(`/api/gifts?user_id=${user.id}`);
+      
       if (response.ok) {
         const data = await response.json();
         setGifts(data);
@@ -66,18 +58,9 @@ export default function MeusPresentesPage() {
     );
     if (!confirmed) return;
 
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      toast.error('Token não encontrado');
-      return;
-    }
-
     try {
-      const response = await fetch(`/api/gifts/${id}`, {
+      const response = await fetchWithAuth(`/api/gifts/${id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       });
 
       if (response.ok) {
@@ -99,27 +82,30 @@ export default function MeusPresentesPage() {
   const handleAddGift = async (giftData: {
     name: string;
     link: string;
-    image: string;
+    image?: string;
+    imageFile?: File;
   }) => {
     if (!user) return;
 
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      toast.error('Token não encontrado');
-      return;
-    }
-
     try {
-      const response = await fetch('/api/gifts', {
+      const formData = new FormData();
+      formData.append('name', giftData.name);
+      formData.append('link', giftData.link);
+      formData.append('user_id', user.id);
+      
+      if (giftData.imageFile) {
+        formData.append('imageFile', giftData.imageFile);
+      } else {
+        formData.append('imageFile', '');
+      }
+
+      if (giftData.image) {
+        formData.append('imageUrl', giftData.image);
+      }
+
+      const response = await fetchWithAuth('/api/gifts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          ...giftData,
-          user_id: user.id,
-        }),
+        body: formData,
       });
 
       if (response.ok) {
