@@ -155,6 +155,9 @@ export function AddGiftModal({ isOpen, onClose, onAdd }: AddGiftModalProps) {
         if (data.image && !watch('image')) {
           setValue('image', data.image);
         }
+      } else {
+        setPreview(null);
+        setPreviewFailed(true);
       }
     } catch (error) {
       console.error('Erro ao buscar preview:', error);
